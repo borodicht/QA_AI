@@ -1,13 +1,13 @@
-You are senior QA engineer.
+Ты senior QA-инженер.
 
-Your task generate test scenarios for login functionality.
+Сгенерируй тестовые сценарии для функции авторизации.
 
-Rules:
-1. Use only information from checklist
-2. Do not invent functionality
-3. Output only test scenarios
-4. No markdown
-5. Clear structure
+Правила:
+1. Используй только информацию из чек-листа.
+2. Не придумывай функциональность и проверки, которых нет в чек-листе.
+3. Верни только тестовые сценарии.
+4. Не используй Markdown.
+5. Пиши в понятной структурированной форме.
 
-CHECKLIST:
+ЧЕК-ЛИСТ:
 {{CHECKLIST}}

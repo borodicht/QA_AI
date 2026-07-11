@@ -1,3 +1,7 @@
+package pipeline;
+
+import util.FilesUtil;
+
 public class PromptEngine {
 
     public static String buildPrompt(String promptTemplatePath, String checklistPath) {

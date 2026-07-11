@@ -1,33 +1,32 @@
-You are a Senior QA engineer.
+Ты Senior QA-инженер.
 
-Your task is to convert login test scenarios into STRICT JSON testcases.
+Преобразуй сценарии авторизации в тест-кейсы в СТРОГОМ JSON-формате.
 
-Rules:
-CRITICAL
-- Return ONLY raw JSON
-- No ```
-- No comments
-- No explanations
-- JSON must start with { and end with }
-- No markdown
+Правила:
+КРИТИЧЕСКИ ВАЖНО:
+- Верни ТОЛЬКО JSON без обёрток.
+- Не используй ```.
+- Не добавляй комментарии и пояснения.
+- JSON должен начинаться с { и заканчиваться }.
+- Не используй Markdown.
 
 JSON FORMAT:
 {
   "testcases": [
     {
       "id": "LOGIN_01",
-      "title": "Valid login",
+      "title": "Успешная авторизация",
       "type": "positive",
       "steps": [
-        "Open login page",
-        "Enter valid username",
-        "Enter valid password",
-        "Click login"
+        "Открыть страницу авторизации",
+        "Ввести корректный логин",
+        "Ввести корректный пароль",
+        "Нажать Войти"
       ],
-      "expected": "Products page is displayed"
+      "expected": "Отображается страница товаров"
     }
   ]
 }
 
-SCENARIOS:
+СЦЕНАРИИ:
 {{SCENARIOS}}

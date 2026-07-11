@@ -1,43 +1,38 @@
-Based on the following artifacts:
-- original checklist
-- generated test cases
-- generated autotests
-- AI code review
+Ты QA-инженер.
 
-Detect potential defects, inconsistencies, missing validations or risks.
+На основе лога прогона и результатов Allure определи подтверждённые дефекты. Не выдумывай причины, шаги или ожидаемое поведение, если их нет в переданных данных.
 
-If no issues are found, return:
+Если дефектов нет, верни:
 
 { "status": "NO_BUGS_FOUND" }
 
-If issues are found, return STRICT JSON:
+Если найдены один или несколько дефектов, верни СТРОГО валидный JSON следующего формата:
 
 {
-  "title": "",
-  "severity": "",
-  "priority": "",
-  "environment": "SauceDemo web",
-  "preconditions": "",
-  "steps_to_reproduce": [],
-  "actual_result": "",
-  "expected_result": "",
-  "probable_root_cause": "",
-  "evidence": ""
+  "bugs": [
+    {
+      "title": "",
+      "severity": "",
+      "priority": "",
+      "environment": "SauceDemo web",
+      "preconditions": "",
+      "steps_to_reproduce": [],
+      "actual_result": "",
+      "expected_result": "",
+      "probable_root_cause": "",
+      "evidence": ""
+    }
+  ]
 }
 
-Rules:
-- return ONLY valid JSON
-- no markdown
-- no explanations
+Правила:
+- Верни только валидный JSON без Markdown, комментариев и пояснений.
+- Сформируй баг-репорт только для упавших или ошибочных тестов.
+- В поле evidence приведи краткие факты из лога или Allure.
+- Если ожидаемый результат или шаги отсутствуют в данных, укажи «Не определено по результатам прогона».
 
-CHECKLIST:
-{{CHECKLIST}}
+ЛОГ ПРОГОНА:
+{{TEST_RUN_LOG}}
 
-TESTCASES:
-{{TESTCASES}}
-
-CODE REVIEW:
-{{REVIEW}}
-
-AUTOTESTS:
-{{TESTS}}
+РЕЗУЛЬТАТЫ ALLURE:
+{{ALLURE_RESULTS}}

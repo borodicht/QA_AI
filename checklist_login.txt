@@ -1,7 +1,8 @@
-Site: https://www.saucedemo.com/
-Scope: Login only
+Сайт: https://www.saucedemo.com/
+Область проверки: только авторизация
 
-Checklist:
-1) Valid login -> Products page is opened
-2) Invalid password -> error message is shown
-
+Чек-лист:
+1) Успешная авторизация -> открывается страница товаров
+2) Неверный пароль -> отображается сообщение об ошибке
+3) Пустые логин и пароль -> отображается сообщение об ошибке
+4) Заблокированный пользователь -> отображается сообщение об ошибке

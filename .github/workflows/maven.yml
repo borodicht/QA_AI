@@ -34,9 +34,7 @@ jobs:
           MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
         run: |
           mkdir -p generated
-          mvn exec:java -Dexec.mainClass=PipelineMain
-      - name: Run generated tests
-        run: mvn test || true
+          mvn exec:java -Dexec.mainClass=pipeline.PipelineMain
 
       - name: Upload AI artifacts
         uses: actions/upload-artifact@v4
@@ -46,3 +44,5 @@ jobs:
             generated/
             src/test/java/org/demo/generated/
             target/surefire-reports/
+            target/allure-results/
+            target/site/allure-maven-plugin/
