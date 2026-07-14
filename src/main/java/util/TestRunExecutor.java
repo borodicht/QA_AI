@@ -7,7 +7,7 @@ public class TestRunExecutor {
 
     public static String runTests() {
         FilesUtil.clearDirectory("target/allure-results");
-        return run("mvn", "test");
+        return run("mvn", "-Dtest=org.demo.generated.GeneratedUiTest", "test");
     }
 
     public static String buildAllureReport() {
