@@ -25,12 +25,19 @@ public class FilesUtil {
     }
 
     public static String readFilesBySuffix(String directory, String suffix) {
-        try (var files = Files.list(Path.of(directory))) {
+        Path path = Path.of(directory);
+        if (!Files.exists(path)) {
+            return "Каталог не найден: " + directory;
+        }
+        if (!Files.isDirectory(path)) {
+            return "Путь не является каталогом: " + directory;
+        }
+        try (var files = Files.list(path)) {
             String content = files
                     .filter(Files::isRegularFile)
-                    .filter(path -> path.getFileName().toString().endsWith(suffix))
+                    .filter(file -> file.getFileName().toString().endsWith(suffix))
                     .sorted()
-                    .map(path -> "Файл: " + path.getFileName() + "\n" + read(path.toString()))
+                    .map(file -> "Файл: " + file.getFileName() + "\n" + read(file.toString()))
                     .collect(Collectors.joining("\n\n"));
             return content.isBlank() ? "Результаты Allure не найдены." : content;
         } catch (Exception e) {

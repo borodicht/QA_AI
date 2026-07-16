@@ -10,29 +10,46 @@ public class TestGenerator {
 
     private static final String OUTPUT_PATH =
             "src/test/java/org/demo/generated/GeneratedUiTest.java";
+    private static final String EXPECTED_PACKAGE = "org.demo.generated";
+    private static final int MAX_ATTEMPTS = 3;
 
     public static String generate(String testcasesJson, String baseUiTest, String pageObject) {
         Set<String> availableMethods = PageObjectContractAnalyzer.extractPublicMethods(pageObject);
-        String prompt = FilesUtil.read("prompts/04_autotests_java.txt")
+        String basePrompt = FilesUtil.read("prompts/04_autotests_java.txt")
                 .replace("{{TESTCASES}}", testcasesJson)
                 .replace("{{BASE_UI_TEST}}", baseUiTest)
                 .replace("{{PAGE_OBJECT}}", pageObject)
                 .replace("{{AVAILABLE_PAGE_OBJECT_METHODS}}",
                         PageObjectContractAnalyzer.formatMethodsForPrompt(availableMethods));
+        String prompt = basePrompt;
+        RuntimeException lastError = null;
 
-        FilesUtil.write("generated/autotests_prompt.txt", prompt);
-        MistralClient.LlmResponse response = MistralClient.call(prompt);
-        FilesUtil.write("generated/autotests_raw.json", response.rawBody());
-        FilesUtil.write("generated/autotests_llm.txt", response.content());
+        for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            FilesUtil.write("generated/autotests_prompt.txt", prompt);
+            MistralClient.LlmResponse response = MistralClient.call(prompt);
+            FilesUtil.write("generated/autotests_raw.json", response.rawBody());
+            FilesUtil.write("generated/autotests_llm.txt", response.content());
 
-        String javaCode = JavaCodeExtractor.extract(response.content());
-        validate(javaCode, availableMethods);
-        FilesUtil.write(OUTPUT_PATH, javaCode);
-        return javaCode;
+            try {
+                String javaCode = JavaCodeExtractor.extract(response.content(), EXPECTED_PACKAGE);
+                javaCode = JavaCodePostProcessor.normalizeGeneratedTest(javaCode);
+                validate(javaCode, availableMethods);
+                FilesUtil.write(OUTPUT_PATH, javaCode);
+                return javaCode;
+            } catch (RuntimeException e) {
+                lastError = e;
+                if (attempt == MAX_ATTEMPTS) {
+                    break;
+                }
+                prompt = buildRetryPrompt(basePrompt, response.content(), e.getMessage(), attempt + 1);
+            }
+        }
+        throw new RuntimeException("Не удалось сгенерировать валидный GeneratedUiTest за "
+                + MAX_ATTEMPTS + " попытки", lastError);
     }
 
     private static void validate(String javaCode, Set<String> availableMethods) {
-        if (!javaCode.contains("package org.demo.generated;")
+        if (!javaCode.contains("package " + EXPECTED_PACKAGE + ";")
                 || !javaCode.contains("class GeneratedUiTest")
                 || !javaCode.contains("extends GeneratedBaseUiTest")
                 || !javaCode.contains("@Test")) {
@@ -47,5 +64,20 @@ public class TestGenerator {
                     "Generated test calls methods absent in GeneratedPageObject: " + missingMethods
                             + ". Available methods: " + availableMethods);
         }
+    }
+
+    private static String buildRetryPrompt(String basePrompt, String previousAnswer, String error, int attempt) {
+        return basePrompt + "\n\n"
+                + "ПРЕДЫДУЩАЯ ПОПЫТКА #" + (attempt - 1) + " НЕ ПРОШЛА ВАЛИДАЦИЮ.\n"
+                + "Ошибка валидации: " + error + "\n"
+                + "Исправь предыдущий ответ и верни заново только Java-код без Markdown.\n"
+                + "Особенно важно:\n"
+                + "- класс должен называться GeneratedUiTest\n"
+                + "- должен быть package " + EXPECTED_PACKAGE + ";\n"
+                + "- класс должен наследоваться от GeneratedBaseUiTest\n"
+                + "- использовать можно только методы Page Object из списка доступных\n"
+                + "- нельзя обращаться к driver напрямую\n\n"
+                + "ПРЕДЫДУЩИЙ ОТВЕТ:\n"
+                + previousAnswer;
     }
 }

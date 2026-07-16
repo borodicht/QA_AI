@@ -93,7 +93,31 @@ application.url=https://www.saucedemo.com/
 
 Можно подставить любой другой URL страницы, для которой хотите показать генерацию Page Object и тестов.
 
-### 3. Подготовить чек-лист
+### 3. Выбрать LLM-провайдера
+
+По умолчанию проект запускается через cloud Mistral по API-ключу:
+
+```properties
+llm.provider=mistral
+```
+
+При таком режиме:
+
+- используется `MISTRAL_API_KEY` из окружения
+- если `llm.baseUrl` не задан, берется `https://api.mistral.ai`
+- если `llm.model` не задан, берется `mistral-small-latest`
+
+Для локального запуска через Ollama укажите в `application.properties`:
+
+```properties
+llm.provider=ollama
+llm.baseUrl=http://localhost:11434
+llm.model=gemma4:latest
+```
+
+При режиме `ollama` ключ `MISTRAL_API_KEY` не требуется.
+
+### 4. Подготовить чек-лист
 
 Входной чек-лист лежит в файле:
 
@@ -101,7 +125,7 @@ application.url=https://www.saucedemo.com/
 
 Сейчас в проекте используется именно это имя файла. Pipeline читает его напрямую.
 
-### 4. Запустить pipeline
+### 5. Запустить pipeline
 
 ```zsh
 mvn compile exec:java
@@ -119,7 +143,7 @@ mvn compile exec:java
 
 ### Ошибка `MISTRAL_API_KEY not set`
 
-Причина: не установлена переменная окружения.
+Причина: выбран `llm.provider=mistral`, но не установлена переменная окружения.
 
 Решение:
 
@@ -131,6 +155,14 @@ export MISTRAL_API_KEY='your-mistral-key'
 
 ```zsh
 mvn compile exec:java
+```
+
+Если вы хотите запускаться без API-ключа, переключите конфиг на Ollama:
+
+```properties
+llm.provider=ollama
+llm.baseUrl=http://localhost:11434
+llm.model=gemma4:latest
 ```
 
 ### Ошибка при генерации UI-тестов или Page Object
