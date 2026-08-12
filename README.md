@@ -1,355 +1,529 @@
-# AI QA Pipeline
+# Astra QA Agent
 
-Функционал:
+**Astra QA Agent** - демонстрационная AI QA-система, которая превращает короткий чек-лист в тестовые сценарии, JSON test cases, Selenium Page Object, UI-автотесты, Allure-результаты, bug report и итоговый отчет агента.
 
-1. Берем короткий чек-лист.
-2. Отправляем его в LLM и получаем тестовые сценарии.
-3. Преобразуем сценарии в JSON с тест-кейсами.
-4. Забираем HTML целевой страницы.
-5. Просим LLM сгенерировать Page Object под эту страницу.
-6. Просим LLM сгенерировать UI-автотесты на Selenium/TestNG.
-7. Запускаем сгенерированные тесты.
-8. Собираем Allure results и лог прогона.
-9. На основе лога и Allure результатов просим LLM сформировать bug report.
+Проект сделан как инженерный прототип AI-assisted QA automation. Он показывает, как связать LLM, Selenium/TestNG, Maven, Allure, PII-защиту и агентский оркестратор со skills.
 
-Проект специально сделан не как production-решение, а как демонстрация того, как можно собрать AI-инструмент из нескольких простых этапов.
+## Что делает система
 
-## Что умеет приложение
+На вход Astra получает:
 
-Проект выполняет следующие функции:
+- `checklist.txt` - короткий QA-чек-лист;
+- `application.url` из `application.properties` - URL тестируемой страницы;
+- LLM-настройки и LLM-профили;
+- задачу пользователя в agent mode.
 
-- читает чек-лист из файла `checklist.txt`
-- генерирует текстовые тестовые сценарии через Mistral API
-- генерирует JSON с тест-кейсами
-- скачивает HTML целевой страницы по URL из `application.properties`
-- генерирует Java Page Object под конкретную страницу
-- генерирует Java UI-тесты под конкретные тест-кейсы и Page Object
-- запускает только сгенерированный AI-тест
-- сохраняет лог выполнения тестов
-- собирает результаты Allure
-- формирует bug report через LLM на основе:
-  - лога прогона
-  - файлов `target/allure-results/*-result.json`
-- выполняет базовую проверку и маскирование PII в промпте
+Основной маршрут:
 
-## Как устроен pipeline
+1. Собрать prompt из чек-листа.
+2. Проверить prompt на PII и при необходимости замаскировать чувствительные данные.
+3. Сгенерировать тестовые сценарии через LLM.
+4. Сгенерировать JSON test cases.
+5. Открыть страницу в headless Chrome и снять rendered DOM.
+6. Сгенерировать Java Page Object.
+7. Сгенерировать Selenium/TestNG UI-тесты.
+8. Провалидировать сгенерированный Java-код.
+9. Запустить сгенерированные тесты.
+10. Собрать Allure results.
+11. Сгенерировать bug report в JSON.
+12. Сформировать итоговое agent summary.
 
-Основной запуск идет через класс `pipeline.PipelineMain`.
+## Текущая архитектура
 
-Маршрут данных такой:
+В проекте есть два режима запуска.
 
-1. `checklist.txt` читается как входной чек-лист.
-2. Шаблон `prompts/01_scenarios_from_checklist.txt` объединяется с чек-листом.
-3. Получившийся промпт проверяется на PII.
-4. Mistral возвращает тестовые сценарии.
-5. Шаблон `prompts/02_testcases_json.txt` превращает сценарии в JSON тест-кейсов.
-6. Из `application.properties` читается `application.url`.
-7. По этому URL загружается HTML страницы.
-8. Шаблон `prompts/03_page_object_java.txt` генерирует `GeneratedPageObject.java`.
-9. Вспомогательный базовый класс теста создается автоматически как `GeneratedBaseUiTest.java`.
-10. Шаблон `prompts/04_autotests_java.txt` генерирует `GeneratedUiTest.java`.
-11. Выполняется Maven-команда запуска только этого теста.
-12. Генерируется Allure report.
-13. Шаблон `prompts/05_bug_report.txt` получает только лог прогона и результаты Allure.
-14. Mistral возвращает bug report в JSON.
+### Agent Mode
 
-## Что нужно для запуска
+Основной режим для развития проекта.
 
-Минимальные требования:
+Entry point:
 
-- Java 17
-- Maven 3.9+
-- Google Chrome
-- интернет-доступ
-- ключ Mistral API
+`src/main/java/agent/QaAgentMain.java`
 
-Важно:
+Агент устроен как последовательный skill-based orchestrator:
 
-- проект делает HTTP-запросы к Mistral API
-- проект загружает HTML целевой страницы по URL
-- UI-тесты запускаются через Selenium и Chrome в headless-режиме
+```text
+QaAgentMain
+  -> QaAgent
+      -> AgentSkillRegistry.defaultSkills()
+          -> AgentSkill.execute(AgentContext)
+```
 
-## Быстрый старт
+Ключевые классы ядра:
 
-### 1. Установить переменную окружения с ключом
+```text
+src/main/java/agent/
+  AgentContext.java        # состояние одного запуска агента
+  AgentRunResult.java      # итог выполнения агента
+  AgentSkill.java          # контракт skill
+  AgentSkillRegistry.java  # порядок skills
+  AgentStepResult.java     # результат одного шага
+  AgentStepStatus.java     # статус шага
+  QaAgent.java             # исполнитель skills
+  QaAgentMain.java         # CLI entry point
+```
+
+Реализации skills лежат отдельно:
+
+```text
+src/main/java/agent/skills/
+  BuildScenariosPromptSkill.java
+  PiiScanSkill.java
+  ScenarioGenerationSkill.java
+  TestcaseGenerationSkill.java
+  UiTestGenerationSkill.java
+  TestRunSkill.java
+  AllureResultsSkill.java
+  BugReportSkill.java
+  SummarySkill.java
+```
+
+### Pipeline Mode
+
+Классический линейный pipeline без skill-оркестратора.
+
+Entry point:
+
+`src/main/java/pipeline/PipelineMain.java`
+
+Этот режим сохранен для сравнения и демонстрации более простого подхода.
+
+## Agent Skills
+
+Текущий порядок skills задается в:
+
+`src/main/java/agent/AgentSkillRegistry.java`
+
+Список skills:
+
+- `BuildScenariosPromptSkill` - собирает prompt из `checklist.txt`.
+- `PiiScanSkill` - проверяет prompt на PII и маскирует найденные данные.
+- `ScenarioGenerationSkill` - генерирует тестовые сценарии через LLM.
+- `TestcaseGenerationSkill` - генерирует JSON test cases и валидирует структуру.
+- `UiTestGenerationSkill` - снимает rendered DOM, генерирует Page Object и UI-тесты.
+- `TestRunSkill` - запускает `org.demo.generated.GeneratedUiTest`.
+- `AllureResultsSkill` - собирает Allure results.
+- `BugReportSkill` - генерирует `bug_report.json`.
+- `SummarySkill` - формирует итоговый отчет агента.
+
+Чтобы добавить новый skill:
+
+1. Создать класс в `src/main/java/agent/skills/`.
+2. Реализовать интерфейс `AgentSkill`.
+3. Использовать `AgentContext` для чтения и записи состояния.
+4. Добавить skill в `AgentSkillRegistry.defaultSkills()`.
+
+Минимальный шаблон:
+
+```java
+package agent.skills;
+
+import agent.AgentContext;
+import agent.AgentSkill;
+import agent.AgentStepResult;
+
+public class CustomSkill implements AgentSkill {
+    @Override
+    public String name() {
+        return "CUSTOM_SKILL";
+    }
+
+    @Override
+    public AgentStepResult execute(AgentContext context) {
+        return AgentStepResult.passed(name(), "Done");
+    }
+}
+```
+
+## Остальные пакеты
+
+```text
+src/main/java/client/
+  LlmProfile.java          # имена LLM-профилей
+  MistralClient.java       # LLM client
+
+src/main/java/config/
+  ApplicationConfig.java   # чтение application.properties
+
+src/main/java/generator/
+  GeneratedTestSupport.java
+  JavaCodeExtractor.java
+  JavaCodePostProcessor.java
+  PageObjectContractAnalyzer.java
+  PageObjectGenerator.java
+  TestGenerator.java
+
+src/main/java/parser/
+  JsonExtractor.java
+  TestcasesParser.java
+
+src/main/java/security/
+  PiiMasker.java
+  PiiPatterns.java
+  PiiReport.java
+  PiiScanner.java
+
+src/main/java/ui/
+  UiSnapshotClient.java    # rendered DOM snapshot через headless Chrome
+
+src/main/java/util/
+  FilesUtil.java
+  TestRunExecutor.java
+```
+
+## LLM-конфигурация
+
+Настройки находятся в:
+
+`application.properties`
+
+Базовый Mistral config:
+
+```properties
+llm.provider=mistral
+llm.baseUrl=https://api.mistral.ai
+llm.model=mistral-small-latest
+llm.systemPrompt=You are a QA engineer. Return structured output.
+```
+
+Для Mistral нужен API key в переменной окружения:
 
 ```zsh
 export MISTRAL_API_KEY='your-mistral-key'
 ```
 
-Проверить, что переменная установилась:
+Локальный Ollama-compatible запуск:
 
-```zsh
-echo $MISTRAL_API_KEY
+```properties
+llm.provider=ollama
+llm.baseUrl=http://localhost:11434
+llm.model=gemma4:latest
 ```
 
-### 2. Указать тестируемый URL
+При `llm.provider=ollama` ключ `MISTRAL_API_KEY` не нужен.
 
-Открыть файл `application.properties` и задать:
+## LLM-профили
+
+LLM-вызовы разделены по профилям. Это позволяет отдельно настраивать температуру, лимиты и модель для каждого этапа.
+
+Общие значения:
+
+```properties
+llm.default.temperature=0.2
+llm.default.maxTokens=4096
+llm.default.topP=1.0
+```
+
+Текущие профили:
+
+```properties
+llm.scenarios.temperature=0.4
+llm.scenarios.maxTokens=4096
+
+llm.testcases.temperature=0.1
+llm.testcases.maxTokens=4096
+
+llm.pageObject.temperature=0.1
+llm.pageObject.maxTokens=8192
+
+llm.autotests.temperature=0.1
+llm.autotests.maxTokens=8192
+
+llm.bugReport.temperature=0.1
+llm.bugReport.maxTokens=4096
+
+llm.summary.temperature=0.3
+llm.summary.maxTokens=4096
+```
+
+Доступные имена профилей заданы в:
+
+`src/main/java/client/LlmProfile.java`
+
+Профили:
+
+- `default`
+- `scenarios`
+- `testcases`
+- `pageObject`
+- `autotests`
+- `bugReport`
+- `summary`
+
+Для каждого профиля можно задать:
+
+- `temperature`
+- `maxTokens`
+- `topP`
+- `model`
+- `systemPrompt`
+
+Пример переопределения модели только для Page Object:
+
+```properties
+llm.pageObject.model=mistral-large-latest
+llm.pageObject.temperature=0.1
+```
+
+## Быстрый старт
+
+### 1. Требования
+
+- Java 17+
+- Maven 3.9+
+- Google Chrome
+- интернет-доступ
+- Mistral API key или локальная Ollama-compatible модель
+
+### 2. Установить ключ Mistral
+
+```zsh
+export MISTRAL_API_KEY='your-mistral-key'
+```
+
+Если используете Ollama, переключите `llm.provider=ollama` в `application.properties`.
+
+### 3. Указать URL
 
 ```properties
 application.url=https://www.saucedemo.com/
 ```
 
-Можно подставить любой другой URL страницы, для которой хотите показать генерацию Page Object и тестов.
-
-### 3. Выбрать LLM-провайдера
-
-По умолчанию проект запускается через cloud Mistral по API-ключу:
-
-```properties
-llm.provider=mistral
-```
-
-При таком режиме:
-
-- используется `MISTRAL_API_KEY` из окружения
-- если `llm.baseUrl` не задан, берется `https://api.mistral.ai`
-- если `llm.model` не задан, берется `mistral-small-latest`
-
-Для локального запуска через Ollama укажите в `application.properties`:
-
-```properties
-llm.provider=ollama
-llm.baseUrl=http://localhost:11434
-llm.model=gemma4:latest
-```
-
-При режиме `ollama` ключ `MISTRAL_API_KEY` не требуется.
-
 ### 4. Подготовить чек-лист
 
-Входной чек-лист лежит в файле:
+Файл:
 
 `checklist.txt`
 
-Сейчас в проекте используется именно это имя файла. Pipeline читает его напрямую.
+Пример:
 
-### 5. Запустить pipeline
+```text
+Страница логина https://www.saucedemo.com/
+
+Чек-лист:
+1. Отображаются поля username и password, а также кнопка Log In
+2. Успешный вход с валидными данными
+3. Ошибка при неверном пароле
+4. Ошибка при пустом поле username
+```
+
+### 5. Запустить Agent Mode
+
+Интерактивно:
+
+```zsh
+mvn compile exec:java -Dexec.mainClass=agent.QaAgentMain
+```
+
+После запуска ввести задачу:
+
+```text
+Проверь логин на saucedemo.com по checklist.txt
+```
+
+Одной командой:
+
+```zsh
+mvn compile exec:java -Dexec.mainClass=agent.QaAgentMain -Dexec.args="Проверь логин на saucedemo.com по checklist.txt"
+```
+
+## Команды
+
+Agent Mode:
+
+```zsh
+mvn compile exec:java -Dexec.mainClass=agent.QaAgentMain
+```
+
+Pipeline Mode:
 
 ```zsh
 mvn compile exec:java
 ```
 
-Если все настроено правильно, pipeline:
+Запустить тесты:
 
-- создаст промежуточные артефакты в `generated/`
-- сгенерирует Java-код тестов
-- запустит автотест
-- соберет Allure
-- сформирует bug report
+```zsh
+mvn test
+```
 
-## Что делать, если pipeline не запускается
+Собрать Allure HTML-report:
 
-### Ошибка `MISTRAL_API_KEY not set`
+```zsh
+mvn allure:report
+```
 
-Причина: выбран `llm.provider=mistral`, но не установлена переменная окружения.
+## Генерируемые Java-файлы
 
-Решение:
+Pipeline и Agent Mode создают или перезаписывают:
+
+```text
+src/test/java/org/demo/generated/support/GeneratedBaseUiTest.java
+src/test/java/org/demo/generated/pages/GeneratedPageObject.java
+src/test/java/org/demo/generated/GeneratedUiTest.java
+```
+
+## Артефакты в generated/
+
+```text
+generated/scenarios_prompt.txt
+generated/scenarios_prompt_masked.txt
+generated/pii_report.txt
+generated/scenarios_raw.json
+generated/scenarios.txt
+
+generated/testcases_prompt.txt
+generated/testcases_raw.json
+generated/testcases_llm.txt
+generated/testcases.json
+
+generated/page_snapshot.html
+generated/page_object_prompt.txt
+generated/page_object_raw.json
+generated/page_object_llm.txt
+
+generated/autotests_prompt.txt
+generated/autotests_raw.json
+generated/autotests_llm.txt
+
+generated/test_run.log
+generated/allure_report.log
+generated/allure_results.txt
+
+generated/bug_report_prompt.txt
+generated/bug_report_raw.json
+generated/bug_report_llm.txt
+generated/bug_report.json
+
+generated/agent_trace.txt
+generated/agent_summary_prompt.txt
+generated/agent_summary_raw.json
+generated/agent_summary.txt
+```
+
+Самые полезные файлы для отладки:
+
+- `generated/agent_trace.txt`
+- `generated/page_snapshot.html`
+- `generated/page_object_llm.txt`
+- `generated/autotests_llm.txt`
+- `generated/test_run.log`
+- `generated/bug_report.json`
+- `generated/agent_summary.txt`
+
+## Валидация генерации
+
+Проект специально добавляет ограничения вокруг LLM-ответов:
+
+- JSON извлекается и валидируется через Jackson.
+- Java-код извлекается из ответа LLM и нормализуется.
+- Page Object должен иметь правильный package, имя класса, конструктор и `open()`.
+- Page Object не должен отдавать наружу public `By` поля.
+- UI-тест должен наследоваться от `GeneratedBaseUiTest`.
+- UI-тест не должен напрямую использовать `driver`, `By`, `ExpectedConditions` и локаторы.
+- UI-тест может вызывать только публичные методы сгенерированного Page Object.
+- Для Page Object и UI-тестов есть retry-попытки, если LLM нарушила контракт.
+
+## PII и безопасность
+
+Перед первым LLM-вызовом агент проверяет prompt на базовые чувствительные данные:
+
+- email
+- phone
+- password
+- API secret
+- bearer token
+- bank card
+- IBAN
+- SNILS
+
+Если PII найдены:
+
+- создается `generated/pii_report.txt`;
+- создается `generated/scenarios_prompt_masked.txt`;
+- в LLM отправляется замаскированный prompt.
+
+Ограничение: сейчас PII-защита применяется к первому prompt на основе чек-листа. Для production-сценария ее нужно расширить на все LLM-входы.
+
+## Allure
+
+Allure results:
+
+`target/allure-results`
+
+Настройка:
+
+`src/test/resources/allure.properties`
+
+HTML-report:
+
+```zsh
+mvn allure:report
+```
+
+Результат:
+
+`target/site/allure-maven-plugin`
+
+## Troubleshooting
+
+### Не задан Mistral API key
+
+Если `llm.provider=mistral`, нужен:
 
 ```zsh
 export MISTRAL_API_KEY='your-mistral-key'
 ```
 
-После этого повторно выполнить:
+### Не генерируется Page Object или UI-тест
 
-```zsh
-mvn compile exec:java
-```
-
-Если вы хотите запускаться без API-ключа, переключите конфиг на Ollama:
-
-```properties
-llm.provider=ollama
-llm.baseUrl=http://localhost:11434
-llm.model=gemma4:latest
-```
-
-### Ошибка при генерации UI-тестов или Page Object
-
-Чаще всего причины такие:
-
-- целевая страница не открывается по `application.url`
-- HTML страницы слишком нестандартный
-- LLM вернула код, который не проходит внутреннюю валидацию
-
-Проверять в первую очередь нужно файлы в `generated/`:
+Проверить:
 
 - `generated/page_snapshot.html`
 - `generated/page_object_llm.txt`
 - `generated/autotests_llm.txt`
+- `generated/agent_trace.txt`
+
+Частые причины:
+
+- страница не открывается по `application.url`;
+- headless Chrome не может снять rendered DOM;
+- LLM не соблюдает Java-контракт;
+- не хватает `llm.pageObject.maxTokens` или `llm.autotests.maxTokens`.
 
 ### UI-тесты не стартуют
 
 Проверить:
 
-- установлен ли Google Chrome
-- доступен ли запуск headless Chrome
-- нет ли ограничений среды на запуск браузера
+- установлен ли Google Chrome;
+- доступен ли headless Chrome;
+- есть ли интернет-доступ к тестируемому URL;
+- не блокирует ли среда запуск браузера.
 
-## Как запускать тесты отдельно
+### Selenium предупреждает про CDP
 
-Есть два разных сценария:
-
-- `mvn compile exec:java` запускает весь AI pipeline: генерацию сценариев, тест-кейсов, Page Object, UI-теста, прогон теста, Allure и bug report
-- `mvn test` запускает Maven-тесты проекта
-
-Важно:
-
-- внутри pipeline для прогона используется `mvn -Dtest=org.demo.generated.GeneratedUiTest test`
-- при обычном `mvn test` Maven запускает все доступные тесты проекта, а не только шаги AI pipeline
-
-## Allure
-
-Результаты Allure складываются в:
-
-`target/allure-results`
-
-Настройка директории задается в файле:
-
-`src/test/resources/allure.properties`
-
-Для сборки HTML-отчета:
-
-```zsh
-mvn allure:report
-```
-
-Готовый HTML-отчет будет в:
-
-`target/site/allure-maven-plugin`
-
-## Что генерируется автоматически
-
-### Java-файлы
-
-Pipeline создает или перезаписывает:
-
-- `src/test/java/org/demo/generated/support/GeneratedBaseUiTest.java`
-- `src/test/java/org/demo/generated/pages/GeneratedPageObject.java`
-- `src/test/java/org/demo/generated/GeneratedUiTest.java`
-
-### Промежуточные артефакты
-
-В папке `generated/` создаются файлы, которые удобно смотреть по шагам:
-
-- `generated/scenarios_prompt.txt` - промпт на генерацию сценариев
-- `generated/scenarios_prompt_masked.txt` - версия промпта после маскировки PII, если были найденные данные
-- `generated/pii_report.txt` - отчет по найденным PII
-- `generated/scenarios_raw.json` - сырой ответ Mistral со сценариями
-- `generated/scenarios.txt` - извлеченный текст сценариев
-- `generated/testcases_prompt.txt` - промпт на генерацию тест-кейсов
-- `generated/testcases_raw.json` - сырой ответ Mistral по тест-кейсам
-- `generated/testcases_llm.txt` - текст ответа LLM по тест-кейсам
-- `generated/testcases.json` - итоговый JSON с тест-кейсами
-- `generated/page_snapshot.html` - HTML страницы, который использовался как контекст
-- `generated/page_object_prompt.txt` - промпт на генерацию Page Object
-- `generated/page_object_raw.json` - сырой ответ Mistral по Page Object
-- `generated/page_object_llm.txt` - текст ответа LLM по Page Object
-- `generated/autotests_prompt.txt` - промпт на генерацию UI-тестов
-- `generated/autotests_raw.json` - сырой ответ Mistral по тестам
-- `generated/autotests_llm.txt` - текст ответа LLM по тестам
-- `generated/test_run.log` - лог прогона Maven-тестов
-- `generated/allure_report.log` - лог сборки Allure report
-- `generated/allure_results.txt` - объединенные данные из `target/allure-results/*-result.json`
-- `generated/bug_report_prompt.txt` - промпт на генерацию bug report
-- `generated/bug_report_raw.json` - сырой ответ Mistral по bug report
-- `generated/bug_report_llm.txt` - текст ответа LLM по bug report
-- `generated/bug_report.json` - итоговый bug report в JSON
-
-## Структура проекта
-
-### Корень проекта
-
-- `application.properties` - URL тестируемого приложения
-- `checklist.txt` - входной чек-лист
-- `pom.xml` - Maven-конфигурация
-- `prompts/` - шаблоны промптов для LLM
-- `generated/` - все промежуточные и итоговые артефакты pipeline
-
-### `src/main/java`
-
-- `pipeline/PipelineMain.java` - основная логика AI pipeline и точка входа
-- `pipeline/PromptEngine.java` - сборка промптов из шаблонов и чек-листа
-- `client/MistralClient.java` - клиент работы с Mistral API через RestAssured
-- `config/ApplicationConfig.java` - чтение `application.properties`
-- `ui/UiSnapshotClient.java` - загрузка HTML страницы по URL
-- `generator/GeneratedTestSupport.java` - создание базового класса UI-теста
-- `generator/PageObjectGenerator.java` - генерация Page Object
-- `generator/TestGenerator.java` - генерация UI-тестов
-- `generator/JavaCodeExtractor.java` - извлечение Java-кода из ответа LLM
-- `parser/JsonExtractor.java` - извлечение JSON из ответа LLM
-- `parser/TestcasesParser.java` - разбор JSON тест-кейсов
-- `model/` - простые модели тест-кейсов
-- `security/PiiScanner.java` - поиск чувствительных данных
-- `security/PiiMasker.java` - маскирование чувствительных данных
-- `security/PiiPatterns.java` - шаблоны для PII
-- `security/PiiReport.java` - отчет по найденным PII
-- `util/FilesUtil.java` - чтение, запись, очистка директорий
-- `util/TestRunExecutor.java` - запуск Maven-тестов и сборка Allure
-
-### `src/test/java`
-
-- `org/demo/generated/` - AI-сгенерированные UI-тесты
-- `org/demo/generated/pages/` - AI-сгенерированный Page Object
-- `org/demo/generated/support/` - базовый класс для AI-теста
-- `security/PiiScannerTest.java` - unit-тест на PII scanner
-
-## Какие промпты есть в проекте
-
-- `prompts/01_scenarios_from_checklist.txt` - из чек-листа в сценарии
-- `prompts/02_testcases_json.txt` - из сценариев в JSON тест-кейсов
-- `prompts/03_page_object_java.txt` - генерация Page Object по URL и HTML
-- `prompts/04_autotests_java.txt` - генерация UI-тестов по тест-кейсам и Page Object
-- `prompts/05_bug_report.txt` - из логов и Allure в bug report
-
-Все промпты написаны на русском языке.
+Selenium может писать warning вида `Unable to find CDP implementation matching ...`. Для текущего сценария это предупреждение не блокирует обычные WebDriver-действия. Если понадобится DevTools/CDP-функциональность, нужно добавить совместимую `selenium-devtools-vXX` зависимость под версию Chrome.
 
 ## Ограничения
 
-Этот проект показывает идею, а не гарантирует 100% стабильную генерацию.
-
-Основные ограничения:
-
-- качество результата зависит от промптов
-- качество результата зависит от HTML целевой страницы
-- LLM может сгенерировать код, который придется доработать
-- UI-тесты чувствительны к изменениям интерфейса
-- bug report формируется только по логу прогона и данным Allure, без дополнительных артефактов
-
-Это показывает, где AI помогает, а где нужны инженерные ограничения, валидация и контроль качества.
+- Это демонстрационный прототип, не production QA platform.
+- Агент выполняет skills последовательно, без динамического planning loop.
+- Качество результата зависит от чек-листа, prompt-файлов, DOM и выбранной модели.
+- Bug report строится только по test log и Allure results.
+- UI-тесты чувствительны к изменениям интерфейса.
+- PII-защита пока покрывает только первый prompt.
+- Секреты нельзя хранить в коде, README, checklist или prompt-файлах.
 
 ## Рекомендуемый сценарий демонстрации
 
 1. Показать `checklist.txt`.
-2. Показать `application.properties`.
-3. Установить `MISTRAL_API_KEY`.
-4. Запустить pipeline одной командой.
-5. Открыть папку `generated/` и пройтись по этапам.
-6. Показать сгенерированный `GeneratedPageObject.java`.
-7. Показать сгенерированный `GeneratedUiTest.java`.
-8. Показать `generated/test_run.log`.
-9. Показать `target/allure-results` и HTML-отчет Allure.
-10. Показать итоговый `generated/bug_report.json`.
-
-## Команды
-
-Основная команда:
-
-```zsh
-mvn compile exec:java
-```
-
-Дополнительные команды:
-
-```zsh
-mvn test
-mvn allure:report
-```
-
-## Безопасность
-
-- не храните `MISTRAL_API_KEY` в коде
-- не коммитьте ключ в Git
-- не добавляйте секреты в чек-листы и промпты
-- pipeline умеет искать и маскировать часть PII, но это не полноценная DLP-защита
+2. Показать `application.properties` и LLM-профили.
+3. Показать структуру `agent/` и `agent/skills/`.
+4. Запустить `agent.QaAgentMain`.
+5. Ввести задачу для агента.
+6. Показать `generated/agent_trace.txt`.
+7. Показать `generated/testcases.json`.
+8. Показать `GeneratedPageObject.java` и `GeneratedUiTest.java`.
+9. Показать `generated/test_run.log`.
+10. Показать `generated/bug_report.json`.
+11. Показать `generated/agent_summary.txt`.

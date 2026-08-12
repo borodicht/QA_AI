@@ -10,7 +10,8 @@ public record ApplicationConfig(
         String llmBaseUrl,
         String llmModel,
         String llmSystemPrompt,
-        String mistralApiKey
+        String mistralApiKey,
+        Properties properties
 ) {
 
     private static final String DEFAULT_LLM_PROVIDER = "mistral";
@@ -18,6 +19,7 @@ public record ApplicationConfig(
     private static final String DEFAULT_MISTRAL_MODEL = "mistral-small-latest";
     private static final String DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434";
     private static final String DEFAULT_OLLAMA_MODEL = "gemma4:latest";
+    private static final double DEFAULT_TEMPERATURE = 0.2;
     private static final String DEFAULT_LLM_SYSTEM_PROMPT =
             "You are a QA engineer. Return structured output.";
 
@@ -57,10 +59,72 @@ public record ApplicationConfig(
                     llmBaseUrl,
                     llmModel,
                     llmSystemPrompt,
-                    mistralApiKey
+                    mistralApiKey,
+                    properties
             );
         } catch (Exception e) {
             throw new RuntimeException("Не удалось загрузить application.properties", e);
+        }
+    }
+
+    public String llmModel(String profile) {
+        return profileProperty(profile, "model", llmModel).trim();
+    }
+
+    public String llmSystemPrompt(String profile) {
+        return profileProperty(profile, "systemPrompt", llmSystemPrompt).trim();
+    }
+
+    public double llmTemperature(String profile) {
+        return parseDouble(profileProperty(profile, "temperature", String.valueOf(DEFAULT_TEMPERATURE)),
+                "temperature", 0.0, 2.0);
+    }
+
+    public Integer llmMaxTokens(String profile) {
+        String value = profileProperty(profile, "maxTokens", "").trim();
+        if (value.isBlank()) {
+            return null;
+        }
+        try {
+            int parsed = Integer.parseInt(value);
+            if (parsed <= 0) {
+                throw new RuntimeException("maxTokens должен быть больше 0");
+            }
+            return parsed;
+        } catch (NumberFormatException e) {
+            throw new RuntimeException("Некорректное значение maxTokens: " + value, e);
+        }
+    }
+
+    public Double llmTopP(String profile) {
+        String value = profileProperty(profile, "topP", "").trim();
+        if (value.isBlank()) {
+            return null;
+        }
+        return parseDouble(value, "topP", 0.0, 1.0);
+    }
+
+    private String profileProperty(String profile, String name, String fallback) {
+        String normalizedProfile = profile == null || profile.isBlank() ? "default" : profile.trim();
+        String profileKey = "llm." + normalizedProfile + "." + name;
+        String defaultKey = "llm.default." + name;
+        String legacyKey = "llm." + name;
+
+        return properties.getProperty(
+                profileKey,
+                properties.getProperty(defaultKey, properties.getProperty(legacyKey, fallback))
+        );
+    }
+
+    private double parseDouble(String value, String name, double min, double max) {
+        try {
+            double parsed = Double.parseDouble(value.trim());
+            if (parsed < min || parsed > max) {
+                throw new RuntimeException(name + " должен быть в диапазоне " + min + ".." + max);
+            }
+            return parsed;
+        } catch (NumberFormatException e) {
+            throw new RuntimeException("Некорректное значение " + name + ": " + value, e);
         }
     }
 }

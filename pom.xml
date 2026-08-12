@@ -16,6 +16,7 @@
         <selenium.version>4.32.0</selenium.version>
         <allure.version>2.27.0</allure.version>
         <restassured.version>5.5.0</restassured.version>
+        <exec.mainClass>pipeline.PipelineMain</exec.mainClass>
     </properties>
 
     <dependencyManagement>
@@ -36,7 +37,6 @@
             <groupId>org.seleniumhq.selenium</groupId>
             <artifactId>selenium-java</artifactId>
             <version>${selenium.version}</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.testng</groupId>
@@ -96,7 +96,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.3.0</version>
                 <configuration>
-                    <mainClass>pipeline.PipelineMain</mainClass>
+                    <mainClass>${exec.mainClass}</mainClass>
                 </configuration>
             </plugin>
         </plugins>

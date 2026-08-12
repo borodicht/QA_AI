@@ -1,6 +1,7 @@
 package pipeline;
 
 import client.MistralClient;
+import client.LlmProfile;
 import config.ApplicationConfig;
 import generator.GeneratedTestSupport;
 import generator.PageObjectGenerator;
@@ -39,7 +40,7 @@ public class PipelineMain {
 
         // Этап 3. Отправляем промпт в LLM и получаем текстовые тестовые сценарии.
         System.out.println("[Этап 3] Генерация тестовых сценариев через LLM");
-        MistralClient.LlmResponse scenariosResponse = MistralClient.call(scenariosPrompt);
+        MistralClient.LlmResponse scenariosResponse = MistralClient.call(scenariosPrompt, LlmProfile.SCENARIOS);
         FilesUtil.write("generated/scenarios_raw.json", scenariosResponse.rawBody());
         String scenarios = scenariosResponse.content();
         FilesUtil.write("generated/scenarios.txt", scenarios);
@@ -52,7 +53,7 @@ public class PipelineMain {
 
         // Этап 5. Получаем от LLM JSON с тест-кейсами и сохраняем сырой и очищенный результат.
         System.out.println("[Этап 5] Генерация test cases через LLM");
-        MistralClient.LlmResponse testcasesResponse = MistralClient.call(testcasesPrompt);
+        MistralClient.LlmResponse testcasesResponse = MistralClient.call(testcasesPrompt, LlmProfile.TESTCASES);
         FilesUtil.write("generated/testcases_raw.json", testcasesResponse.rawBody());
         FilesUtil.write("generated/testcases_llm.txt", testcasesResponse.content());
 
@@ -97,7 +98,7 @@ public class PipelineMain {
 
         // Этап 12. Получаем от LLM структурированный bug report и сохраняем его как JSON.
         System.out.println("[Этап 12] Генерация bug report через LLM");
-        MistralClient.LlmResponse bugResponse = MistralClient.call(bugPrompt);
+        MistralClient.LlmResponse bugResponse = MistralClient.call(bugPrompt, LlmProfile.BUG_REPORT);
         FilesUtil.write("generated/bug_report_raw.json", bugResponse.rawBody());
         FilesUtil.write("generated/bug_report_llm.txt", bugResponse.content());
         FilesUtil.write("generated/bug_report.json", JsonExtractor.extractJson(bugResponse.content()));

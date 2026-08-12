@@ -1,6 +1,7 @@
 package generator;
 
 import client.MistralClient;
+import client.LlmProfile;
 import util.FilesUtil;
 
 public class PageObjectGenerator {
@@ -20,7 +21,7 @@ public class PageObjectGenerator {
         for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             FilesUtil.write("generated/page_object_prompt.txt", prompt);
 
-            MistralClient.LlmResponse response = MistralClient.call(prompt);
+            MistralClient.LlmResponse response = MistralClient.call(prompt, LlmProfile.PAGE_OBJECT);
             FilesUtil.write("generated/page_object_raw.json", response.rawBody());
             FilesUtil.write("generated/page_object_llm.txt", response.content());
 
@@ -48,6 +49,12 @@ public class PageObjectGenerator {
                 || !javaCode.contains("GeneratedPageObject(WebDriver driver)")
                 || !javaCode.contains("void open()")) {
             throw new RuntimeException("Page Object does not satisfy the required Java contract");
+        }
+        if (javaCode.contains("public By ")) {
+            throw new RuntimeException("Page Object must expose behavior methods, not public By fields");
+        }
+        if (PageObjectContractAnalyzer.extractPublicMethods(javaCode).size() <= 1) {
+            throw new RuntimeException("Page Object must expose public methods in addition to open()");
         }
     }
 

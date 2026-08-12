@@ -1,10 +1,12 @@
 package generator;
 
 import client.MistralClient;
+import client.LlmProfile;
 import util.FilesUtil;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 public class TestGenerator {
 
@@ -12,6 +14,10 @@ public class TestGenerator {
             "src/test/java/org/demo/generated/GeneratedUiTest.java";
     private static final String EXPECTED_PACKAGE = "org.demo.generated";
     private static final int MAX_ATTEMPTS = 3;
+    private static final Pattern SUCCESS_TEST_ASSERTS_LOGIN_PAGE = Pattern.compile(
+            "(?s)void\\s+\\w*Successful\\w*\\s*\\([^)]*\\)\\s*\\{.*Assert\\.assertTrue\\s*\\(\\s*page\\.isOnLoginPage\\s*\\(");
+    private static final Pattern STRICT_ERROR_TEXT_ASSERTION = Pattern.compile(
+            "Assert\\.assertEquals\\s*\\(\\s*page\\.getErrorMessage\\s*\\(");
 
     public static String generate(String testcasesJson, String baseUiTest, String pageObject) {
         Set<String> availableMethods = PageObjectContractAnalyzer.extractPublicMethods(pageObject);
@@ -26,7 +32,7 @@ public class TestGenerator {
 
         for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             FilesUtil.write("generated/autotests_prompt.txt", prompt);
-            MistralClient.LlmResponse response = MistralClient.call(prompt);
+            MistralClient.LlmResponse response = MistralClient.call(prompt, LlmProfile.AUTOTESTS);
             FilesUtil.write("generated/autotests_raw.json", response.rawBody());
             FilesUtil.write("generated/autotests_llm.txt", response.content());
 
@@ -63,6 +69,25 @@ public class TestGenerator {
             throw new RuntimeException(
                     "Generated test calls methods absent in GeneratedPageObject: " + missingMethods
                             + ". Available methods: " + availableMethods);
+        }
+
+        String codeWithoutAllowedConstructor = javaCode.replace("new GeneratedPageObject(driver)", "");
+        if (codeWithoutAllowedConstructor.contains("driver.")) {
+            throw new RuntimeException("Generated test must not access WebDriver directly; use GeneratedPageObject methods");
+        }
+        if (javaCode.contains("By.") || javaCode.contains("import org.openqa.selenium.By;")) {
+            throw new RuntimeException("Generated test must not use Selenium By directly; use GeneratedPageObject methods");
+        }
+        if (javaCode.contains("ExpectedConditions")) {
+            throw new RuntimeException("Generated test must not use ExpectedConditions directly; waits belong in GeneratedPageObject");
+        }
+        if (SUCCESS_TEST_ASSERTS_LOGIN_PAGE.matcher(javaCode).find()) {
+            throw new RuntimeException(
+                    "Successful login tests must not assert that the user remains on the login page");
+        }
+        if (STRICT_ERROR_TEXT_ASSERTION.matcher(javaCode).find()) {
+            throw new RuntimeException(
+                    "Do not use strict equality for generated error messages; assert visibility, non-empty text, or contains only when exact text is explicitly required");
         }
     }
 

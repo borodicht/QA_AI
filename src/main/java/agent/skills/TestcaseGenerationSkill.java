@@ -1,0 +1,35 @@
+package agent.skills;
+
+import agent.AgentContext;
+import agent.AgentSkill;
+import agent.AgentStepResult;
+import client.LlmProfile;
+import client.MistralClient;
+import parser.JsonExtractor;
+import parser.TestcasesParser;
+import util.FilesUtil;
+
+public class TestcaseGenerationSkill implements AgentSkill {
+
+    @Override
+    public String name() {
+        return "GENERATE_AND_VALIDATE_TESTCASES";
+    }
+
+    @Override
+    public AgentStepResult execute(AgentContext context) {
+        String testcasesPrompt = FilesUtil.read("prompts/02_testcases_json.txt")
+                .replace("{{SCENARIOS}}", context.scenarios());
+        FilesUtil.write("generated/testcases_prompt.txt", testcasesPrompt);
+
+        MistralClient.LlmResponse response = MistralClient.call(testcasesPrompt, LlmProfile.TESTCASES);
+        FilesUtil.write("generated/testcases_raw.json", response.rawBody());
+        FilesUtil.write("generated/testcases_llm.txt", response.content());
+
+        String testcasesJson = JsonExtractor.extractJson(response.content());
+        context.testcasesJson(testcasesJson);
+        FilesUtil.write(AgentContext.TESTCASES_PATH, testcasesJson);
+        TestcasesParser.parse(AgentContext.TESTCASES_PATH);
+        return AgentStepResult.passed(name(), "Validated JSON saved to " + AgentContext.TESTCASES_PATH);
+    }
+}

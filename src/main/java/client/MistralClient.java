@@ -7,6 +7,7 @@ import io.restassured.RestAssured;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -15,17 +16,30 @@ public class MistralClient {
         private static final String CHAT_COMPLETIONS_PATH = "/v1/chat/completions";
 
         public static LlmResponse call(String prompt) {
+            return call(prompt, LlmProfile.DEFAULT);
+        }
+
+        public static LlmResponse call(String prompt, String profile) {
 
             try {
                 ApplicationConfig config = ApplicationConfig.load();
-                Map<String, Object> body = Map.of(
-                        "model", config.llmModel(),
-                        "messages", List.of(
-                                Map.of("role", "system", "content", config.llmSystemPrompt()),
+                Map<String, Object> body = new LinkedHashMap<>();
+                body.put("model", config.llmModel(profile));
+                body.put("messages", List.of(
+                                Map.of("role", "system", "content", config.llmSystemPrompt(profile)),
                                 Map.of("role", "user", "content", prompt)
-                        ),
-                        "temperature", 0.2
-                );
+                        ));
+                body.put("temperature", config.llmTemperature(profile));
+
+                Integer maxTokens = config.llmMaxTokens(profile);
+                if (maxTokens != null) {
+                    body.put("max_tokens", maxTokens);
+                }
+
+                Double topP = config.llmTopP(profile);
+                if (topP != null) {
+                    body.put("top_p", topP);
+                }
 
                 Response response = RestAssured.given()
                         .baseUri(config.llmBaseUrl())
