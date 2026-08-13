@@ -49,11 +49,22 @@ QaAgentMain
           -> AgentSkill.execute(AgentContext)
 ```
 
+Перед выполнением skills агент определяет intent задачи через `AgentIntentResolver`.
+Intent влияет на `canHandle()` каждого skill и позволяет запускать не только полный QA-цикл,
+но и ограниченные маршруты:
+
+- `FULL_QA_CYCLE` - полный маршрут от сценариев до summary.
+- `TESTCASES_ONLY` - генерация сценариев и JSON test cases без UI-автотестов.
+- `SCENARIOS_ONLY` - генерация только тестовых сценариев.
+- `PII_ONLY` - сборка prompt, PII scan/masking и итоговый summary.
+
 Ключевые классы ядра:
 
 ```text
 src/main/java/agent/
   AgentContext.java        # состояние одного запуска агента
+  AgentIntent.java         # тип маршрута запуска агента
+  AgentIntentResolver.java # определение маршрута по задаче пользователя
   AgentRunResult.java      # итог выполнения агента
   AgentSkill.java          # контракт skill
   AgentSkillRegistry.java  # порядок skills
@@ -522,22 +533,9 @@ Selenium может писать warning вида `Unable to find CDP implementa
 
 - Это демонстрационный прототип, не production QA platform.
 - Агент выполняет skills последовательно, без динамического planning loop.
+- Intent задачи определяется rule-based эвристиками по текстовым маркерам.
 - Качество результата зависит от чек-листа, prompt-файлов, DOM и выбранной модели.
 - Bug report строится только по test log и Allure results.
 - UI-тесты чувствительны к изменениям интерфейса.
 - PII-защита пока покрывает только первый prompt.
 - Секреты нельзя хранить в коде, README, checklist или prompt-файлах.
-
-## Рекомендуемый сценарий демонстрации
-
-1. Показать `checklist.txt`.
-2. Показать `application.properties` и LLM-профили.
-3. Показать структуру `agent/` и `agent/skills/`.
-4. Запустить `agent.QaAgentMain`.
-5. Ввести задачу для агента.
-6. Показать `generated/agent_trace.txt`.
-7. Показать `generated/testcases.json`.
-8. Показать `GeneratedPageObject.java` и `GeneratedUiTest.java`.
-9. Показать `generated/test_run.log`.
-10. Показать `generated/bug_report.json`.
-11. Показать `generated/agent_summary.txt`.
