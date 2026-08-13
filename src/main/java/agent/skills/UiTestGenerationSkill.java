@@ -1,6 +1,7 @@
 package agent.skills;
 
 import agent.AgentContext;
+import agent.AgentIntent;
 import agent.AgentSkill;
 import agent.AgentStepResult;
 import config.ApplicationConfig;
@@ -15,6 +16,11 @@ public class UiTestGenerationSkill implements AgentSkill {
     @Override
     public String name() {
         return "GENERATE_UI_TESTS";
+    }
+
+    @Override
+    public boolean canHandle(AgentContext context) {
+        return context.hasIntent(AgentIntent.FULL_QA_CYCLE);
     }
 
     @Override

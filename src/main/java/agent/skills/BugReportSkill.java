@@ -1,6 +1,7 @@
 package agent.skills;
 
 import agent.AgentContext;
+import agent.AgentIntent;
 import agent.AgentSkill;
 import agent.AgentStepResult;
 import client.LlmProfile;
@@ -13,6 +14,11 @@ public class BugReportSkill implements AgentSkill {
     @Override
     public String name() {
         return "GENERATE_BUG_REPORT";
+    }
+
+    @Override
+    public boolean canHandle(AgentContext context) {
+        return context.hasIntent(AgentIntent.FULL_QA_CYCLE);
     }
 
     @Override

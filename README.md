@@ -335,6 +335,20 @@ Agent Mode:
 mvn compile exec:java -Dexec.mainClass=agent.QaAgentMain
 ```
 
+Agent Mode подбирает маршрут по тексту задачи:
+
+```zsh
+mvn compile exec:java -Dexec.mainClass=agent.QaAgentMain -Dexec.args="Сгенерируй только тесткейсы без автоматизации"
+```
+
+В этом режиме агент остановится после `generated/testcases.json` и не будет генерировать UI-автотесты, запускать Maven, собирать Allure или bug report.
+
+```zsh
+mvn compile exec:java -Dexec.mainClass=agent.QaAgentMain -Dexec.args="Проверь checklist.txt на PII"
+```
+
+В этом режиме агент выполнит только сборку prompt, PII scan/masking и итоговый summary.
+
 Pipeline Mode:
 
 ```zsh

@@ -1,6 +1,7 @@
 package agent.skills;
 
 import agent.AgentContext;
+import agent.AgentIntent;
 import agent.AgentSkill;
 import agent.AgentStepResult;
 import client.LlmProfile;
@@ -14,6 +15,12 @@ public class TestcaseGenerationSkill implements AgentSkill {
     @Override
     public String name() {
         return "GENERATE_AND_VALIDATE_TESTCASES";
+    }
+
+    @Override
+    public boolean canHandle(AgentContext context) {
+        return context.hasIntent(AgentIntent.FULL_QA_CYCLE)
+                || context.hasIntent(AgentIntent.TESTCASES_ONLY);
     }
 
     @Override

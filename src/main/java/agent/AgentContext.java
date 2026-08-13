@@ -12,6 +12,7 @@ public class AgentContext {
     public static final String TRACE_PATH = "generated/agent_trace.txt";
 
     private final String userGoal;
+    private final AgentIntent intent;
     private final List<AgentStepResult> steps = new ArrayList<>();
 
     private String scenariosPrompt;
@@ -25,10 +26,19 @@ public class AgentContext {
 
     public AgentContext(String userGoal) {
         this.userGoal = userGoal;
+        this.intent = AgentIntentResolver.resolve(userGoal);
     }
 
     public String userGoal() {
         return userGoal;
+    }
+
+    public AgentIntent intent() {
+        return intent;
+    }
+
+    public boolean hasIntent(AgentIntent expectedIntent) {
+        return intent == expectedIntent;
     }
 
     public List<AgentStepResult> steps() {

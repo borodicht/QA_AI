@@ -18,6 +18,9 @@
 ЦЕЛЬ ПОЛЬЗОВАТЕЛЯ:
 {{USER_GOAL}}
 
+РЕЖИМ АГЕНТА:
+{{AGENT_INTENT}}
+
 TRACE АГЕНТА:
 {{AGENT_TRACE}}
 

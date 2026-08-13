@@ -18,6 +18,10 @@ public class QaAgent {
 
     public AgentRunResult run(String userGoal) {
         AgentContext context = new AgentContext(userGoal);
+        context.addStep(AgentStepResult.passed(
+                "RESOLVE_AGENT_INTENT",
+                "Resolved intent: " + context.intent()
+        ));
 
         try {
             for (AgentSkill skill : skills) {
