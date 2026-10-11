@@ -5,7 +5,7 @@ import agent.AgentIntent;
 import agent.AgentSkill;
 import agent.AgentStepResult;
 import client.LlmProfile;
-import client.MistralClient;
+import client.OpenRouterClient;
 import parser.JsonExtractor;
 import util.FilesUtil;
 
@@ -28,7 +28,7 @@ public class BugReportSkill implements AgentSkill {
                 .replace("{{ALLURE_RESULTS}}", nullToEmpty(context.allureResults()));
         FilesUtil.write("generated/bug_report_prompt.txt", bugPrompt);
 
-        MistralClient.LlmResponse response = MistralClient.call(bugPrompt, LlmProfile.BUG_REPORT);
+        OpenRouterClient.LlmResponse response = OpenRouterClient.call(bugPrompt, LlmProfile.BUG_REPORT);
         FilesUtil.write("generated/bug_report_raw.json", response.rawBody());
         FilesUtil.write("generated/bug_report_llm.txt", response.content());
         String bugReportJson = JsonExtractor.extractJson(response.content());

@@ -5,7 +5,7 @@ import agent.AgentIntent;
 import agent.AgentSkill;
 import agent.AgentStepResult;
 import client.LlmProfile;
-import client.MistralClient;
+import client.OpenRouterClient;
 import parser.JsonExtractor;
 import parser.TestcasesParser;
 import util.FilesUtil;
@@ -29,7 +29,7 @@ public class TestcaseGenerationSkill implements AgentSkill {
                 .replace("{{SCENARIOS}}", context.scenarios());
         FilesUtil.write("generated/testcases_prompt.txt", testcasesPrompt);
 
-        MistralClient.LlmResponse response = MistralClient.call(testcasesPrompt, LlmProfile.TESTCASES);
+        OpenRouterClient.LlmResponse response = OpenRouterClient.call(testcasesPrompt, LlmProfile.TESTCASES);
         FilesUtil.write("generated/testcases_raw.json", response.rawBody());
         FilesUtil.write("generated/testcases_llm.txt", response.content());
 

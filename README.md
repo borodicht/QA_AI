@@ -151,7 +151,7 @@ public class CustomSkill implements AgentSkill {
 ```text
 src/main/java/client/
   LlmProfile.java          # имена LLM-профилей
-  MistralClient.java       # LLM client
+  OpenRouterClient.java    # LLM client
 
 src/main/java/config/
   ApplicationConfig.java   # чтение application.properties
@@ -188,19 +188,19 @@ src/main/java/util/
 
 `application.properties`
 
-Базовый Mistral config:
+Базовый OpenRouter config:
 
 ```properties
-llm.provider=mistral
-llm.baseUrl=https://api.mistral.ai
-llm.model=mistral-small-latest
+llm.provider=openrouter
+llm.baseUrl=https://openrouter.ai
+llm.model=deepseek/deepseek-v4.1-flash
 llm.systemPrompt=You are a QA engineer. Return structured output.
 ```
 
-Для Mistral нужен API key в переменной окружения:
+Для OpenRouter нужен API key в переменной окружения:
 
 ```zsh
-export MISTRAL_API_KEY='your-mistral-key'
+export OPENROUTER_API_KEY='your-openrouter-key'
 ```
 
 Локальный Ollama-compatible запуск:
@@ -211,7 +211,7 @@ llm.baseUrl=http://localhost:11434
 llm.model=gemma4:latest
 ```
 
-При `llm.provider=ollama` ключ `MISTRAL_API_KEY` не нужен.
+При `llm.provider=ollama` ключ `OPENROUTER_API_KEY` не нужен.
 
 ## LLM-профили
 
@@ -272,7 +272,7 @@ llm.summary.maxTokens=4096
 Пример переопределения модели только для Page Object:
 
 ```properties
-llm.pageObject.model=mistral-large-latest
+llm.pageObject.model=deepseek/deepseek-v4.1-flash
 llm.pageObject.temperature=0.1
 ```
 
@@ -284,12 +284,12 @@ llm.pageObject.temperature=0.1
 - Maven 3.9+
 - Google Chrome
 - интернет-доступ
-- Mistral API key или локальная Ollama-compatible модель
+- OpenRouter API key или локальная Ollama-compatible модель
 
-### 2. Установить ключ Mistral
+### 2. Установить ключ OpenRouter
 
 ```zsh
-export MISTRAL_API_KEY='your-mistral-key'
+export OPENROUTER_API_KEY='your-openrouter-key'
 ```
 
 Если используете Ollama, переключите `llm.provider=ollama` в `application.properties`.
@@ -492,12 +492,12 @@ mvn allure:report
 
 ## Troubleshooting
 
-### Не задан Mistral API key
+### Не задан OpenRouter API key
 
-Если `llm.provider=mistral`, нужен:
+Если `llm.provider=openrouter`, нужен:
 
 ```zsh
-export MISTRAL_API_KEY='your-mistral-key'
+export OPENROUTER_API_KEY='your-openrouter-key'
 ```
 
 ### Не генерируется Page Object или UI-тест

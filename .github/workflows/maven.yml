@@ -31,7 +31,7 @@ jobs:
 
       - name: Run AI QA pipeline
         env:
-          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           mkdir -p generated
           mvn exec:java -Dexec.mainClass=pipeline.PipelineMain

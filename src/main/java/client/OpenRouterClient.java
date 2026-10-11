@@ -11,9 +11,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public class MistralClient {
+public class OpenRouterClient {
 
-        private static final String CHAT_COMPLETIONS_PATH = "/v1/chat/completions";
+        private static final String OPENROUTER_CHAT_COMPLETIONS_PATH = "/api/v1/chat/completions";
+        private static final String OLLAMA_CHAT_COMPLETIONS_PATH = "/v1/chat/completions";
 
         public static LlmResponse call(String prompt) {
             return call(prompt, LlmProfile.DEFAULT);
@@ -46,7 +47,7 @@ public class MistralClient {
                         .contentType(ContentType.JSON)
                         .headers(buildHeaders(config))
                         .body(body)
-                        .post(CHAT_COMPLETIONS_PATH);
+                        .post(chatCompletionsPath(config));
 
                 String rawBody = response.getBody().asString();
                 if (response.statusCode() < 200 || response.statusCode() >= 300) {
@@ -56,7 +57,7 @@ public class MistralClient {
                 JsonNode content = new ObjectMapper().readTree(rawBody)
                         .path("choices").path(0).path("message").path("content");
                 if (content.isMissingNode() || content.asText().isBlank()) {
-                    throw new RuntimeException("Mistral API response has no assistant content: " + rawBody);
+                    throw new RuntimeException("OpenRouter API response has no assistant content: " + rawBody);
                 }
                 return new LlmResponse(rawBody, content.asText());
 
@@ -66,10 +67,16 @@ public class MistralClient {
         }
 
         private static Map<String, String> buildHeaders(ApplicationConfig config) {
-            if ("mistral".equals(config.llmProvider())) {
-                return Map.of("Authorization", "Bearer " + config.mistralApiKey());
+            if ("openrouter".equals(config.llmProvider())) {
+                return Map.of("Authorization", "Bearer " + config.openRouterApiKey());
             }
             return Map.of();
+        }
+
+        private static String chatCompletionsPath(ApplicationConfig config) {
+            return "openrouter".equals(config.llmProvider())
+                    ? OPENROUTER_CHAT_COMPLETIONS_PATH
+                    : OLLAMA_CHAT_COMPLETIONS_PATH;
         }
 
         public record LlmResponse(String rawBody, String content) {

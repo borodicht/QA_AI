@@ -5,7 +5,7 @@ import agent.AgentIntent;
 import agent.AgentSkill;
 import agent.AgentStepResult;
 import client.LlmProfile;
-import client.MistralClient;
+import client.OpenRouterClient;
 import util.FilesUtil;
 
 public class SummarySkill implements AgentSkill {
@@ -33,7 +33,7 @@ public class SummarySkill implements AgentSkill {
                 .replace("{{BUG_REPORT}}", nullToEmpty(context.bugReportJson()));
         FilesUtil.write("generated/agent_summary_prompt.txt", prompt);
 
-        MistralClient.LlmResponse response = MistralClient.call(prompt, LlmProfile.SUMMARY);
+        OpenRouterClient.LlmResponse response = OpenRouterClient.call(prompt, LlmProfile.SUMMARY);
         FilesUtil.write("generated/agent_summary_raw.json", response.rawBody());
         FilesUtil.write("generated/agent_summary.txt", response.content());
         context.finalReport(response.content());

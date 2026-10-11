@@ -5,7 +5,7 @@ import agent.AgentIntent;
 import agent.AgentSkill;
 import agent.AgentStepResult;
 import client.LlmProfile;
-import client.MistralClient;
+import client.OpenRouterClient;
 import util.FilesUtil;
 
 public class ScenarioGenerationSkill implements AgentSkill {
@@ -24,7 +24,7 @@ public class ScenarioGenerationSkill implements AgentSkill {
 
     @Override
     public AgentStepResult execute(AgentContext context) {
-        MistralClient.LlmResponse response = MistralClient.call(context.scenariosPrompt(), LlmProfile.SCENARIOS);
+        OpenRouterClient.LlmResponse response = OpenRouterClient.call(context.scenariosPrompt(), LlmProfile.SCENARIOS);
         FilesUtil.write("generated/scenarios_raw.json", response.rawBody());
         context.scenarios(response.content());
         FilesUtil.write("generated/scenarios.txt", response.content());

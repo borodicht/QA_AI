@@ -1,6 +1,6 @@
 package generator;
 
-import client.MistralClient;
+import client.OpenRouterClient;
 import client.LlmProfile;
 import util.FilesUtil;
 
@@ -32,7 +32,7 @@ public class TestGenerator {
 
         for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             FilesUtil.write("generated/autotests_prompt.txt", prompt);
-            MistralClient.LlmResponse response = MistralClient.call(prompt, LlmProfile.AUTOTESTS);
+            OpenRouterClient.LlmResponse response = OpenRouterClient.call(prompt, LlmProfile.AUTOTESTS);
             FilesUtil.write("generated/autotests_raw.json", response.rawBody());
             FilesUtil.write("generated/autotests_llm.txt", response.content());
 

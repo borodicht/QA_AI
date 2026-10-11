@@ -1,6 +1,6 @@
 package generator;
 
-import client.MistralClient;
+import client.OpenRouterClient;
 import client.LlmProfile;
 import util.FilesUtil;
 
@@ -21,7 +21,7 @@ public class PageObjectGenerator {
         for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             FilesUtil.write("generated/page_object_prompt.txt", prompt);
 
-            MistralClient.LlmResponse response = MistralClient.call(prompt, LlmProfile.PAGE_OBJECT);
+            OpenRouterClient.LlmResponse response = OpenRouterClient.call(prompt, LlmProfile.PAGE_OBJECT);
             FilesUtil.write("generated/page_object_raw.json", response.rawBody());
             FilesUtil.write("generated/page_object_llm.txt", response.content());
 

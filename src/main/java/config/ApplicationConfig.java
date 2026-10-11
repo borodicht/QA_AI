@@ -10,13 +10,13 @@ public record ApplicationConfig(
         String llmBaseUrl,
         String llmModel,
         String llmSystemPrompt,
-        String mistralApiKey,
+        String openRouterApiKey,
         Properties properties
 ) {
 
-    private static final String DEFAULT_LLM_PROVIDER = "mistral";
-    private static final String DEFAULT_MISTRAL_BASE_URL = "https://api.mistral.ai";
-    private static final String DEFAULT_MISTRAL_MODEL = "mistral-small-latest";
+    private static final String DEFAULT_LLM_PROVIDER = "openrouter";
+    private static final String DEFAULT_OPENROUTER_BASE_URL = "https://openrouter.ai";
+    private static final String DEFAULT_OPENROUTER_MODEL = "deepseek/deepseek-v4.1-flash";
     private static final String DEFAULT_OLLAMA_BASE_URL = "http://localhost:11434";
     private static final String DEFAULT_OLLAMA_MODEL = "gemma4:latest";
     private static final double DEFAULT_TEMPERATURE = 0.2;
@@ -32,15 +32,15 @@ public record ApplicationConfig(
                 throw new RuntimeException("Не задано свойство application.url");
             }
             String llmProvider = properties.getProperty("llm.provider", DEFAULT_LLM_PROVIDER).trim().toLowerCase();
-            if (!"mistral".equals(llmProvider) && !"ollama".equals(llmProvider)) {
-                throw new RuntimeException("llm.provider должен быть mistral или ollama");
+            if (!"openrouter".equals(llmProvider) && !"ollama".equals(llmProvider)) {
+                throw new RuntimeException("llm.provider должен быть openrouter или ollama");
             }
-            String defaultBaseUrl = "ollama".equals(llmProvider) ? DEFAULT_OLLAMA_BASE_URL : DEFAULT_MISTRAL_BASE_URL;
-            String defaultModel = "ollama".equals(llmProvider) ? DEFAULT_OLLAMA_MODEL : DEFAULT_MISTRAL_MODEL;
+            String defaultBaseUrl = "ollama".equals(llmProvider) ? DEFAULT_OLLAMA_BASE_URL : DEFAULT_OPENROUTER_BASE_URL;
+            String defaultModel = "ollama".equals(llmProvider) ? DEFAULT_OLLAMA_MODEL : DEFAULT_OPENROUTER_MODEL;
             String llmBaseUrl = properties.getProperty("llm.baseUrl", defaultBaseUrl).trim();
             String llmModel = properties.getProperty("llm.model", defaultModel).trim();
             String llmSystemPrompt = properties.getProperty("llm.systemPrompt", DEFAULT_LLM_SYSTEM_PROMPT).trim();
-            String mistralApiKey = System.getenv("MISTRAL_API_KEY");
+            String openRouterApiKey = System.getenv("OPENROUTER_API_KEY");
             if (llmBaseUrl.isBlank()) {
                 throw new RuntimeException("Не задано свойство llm.baseUrl");
             }
@@ -50,8 +50,8 @@ public record ApplicationConfig(
             if (llmSystemPrompt.isBlank()) {
                 throw new RuntimeException("Не задано свойство llm.systemPrompt");
             }
-            if ("mistral".equals(llmProvider) && (mistralApiKey == null || mistralApiKey.isBlank())) {
-                throw new RuntimeException("Для llm.provider=mistral должна быть установлена переменная MISTRAL_API_KEY");
+            if ("openrouter".equals(llmProvider) && (openRouterApiKey == null || openRouterApiKey.isBlank())) {
+                throw new RuntimeException("Для llm.provider=openrouter должна быть установлена переменная OPENROUTER_API_KEY");
             }
             return new ApplicationConfig(
                     url,
@@ -59,7 +59,7 @@ public record ApplicationConfig(
                     llmBaseUrl,
                     llmModel,
                     llmSystemPrompt,
-                    mistralApiKey,
+                    openRouterApiKey,
                     properties
             );
         } catch (Exception e) {
