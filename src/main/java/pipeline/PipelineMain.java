@@ -22,6 +22,7 @@ public class PipelineMain {
 
     public static void main(String[] args) {
         System.out.println("=== AI QA PIPELINE STARTED ===");
+
         // Этап 1. Собираем промпт для генерации сценариев из шаблона и входного чек-листа.
         System.out.println("[Этап 1] Сборка промпта для генерации сценариев");
         String scenariosPrompt = PromptEngine.buildPrompt(
@@ -40,7 +41,7 @@ public class PipelineMain {
 
         // Этап 3. Отправляем промпт в LLM и получаем текстовые тестовые сценарии.
         System.out.println("[Этап 3] Генерация тестовых сценариев через LLM");
-        OpenRouterClient.LlmResponse scenariosResponse = OpenRouterClient.call(scenariosPrompt, LlmProfile.SCENARIOS);
+        OpenRouterClient.LlmResponse scenariosResponse = OpenRouterClient.call(scenariosPrompt);
         FilesUtil.write("generated/scenarios_raw.json", scenariosResponse.rawBody());
         String scenarios = scenariosResponse.content();
         FilesUtil.write("generated/scenarios.txt", scenarios);
@@ -53,7 +54,7 @@ public class PipelineMain {
 
         // Этап 5. Получаем от LLM JSON с тест-кейсами и сохраняем сырой и очищенный результат.
         System.out.println("[Этап 5] Генерация test cases через LLM");
-        OpenRouterClient.LlmResponse testcasesResponse = OpenRouterClient.call(testcasesPrompt, LlmProfile.TESTCASES);
+        OpenRouterClient.LlmResponse testcasesResponse = OpenRouterClient.call(testcasesPrompt);
         FilesUtil.write("generated/testcases_raw.json", testcasesResponse.rawBody());
         FilesUtil.write("generated/testcases_llm.txt", testcasesResponse.content());
 
@@ -98,7 +99,7 @@ public class PipelineMain {
 
         // Этап 12. Получаем от LLM структурированный bug report и сохраняем его как JSON.
         System.out.println("[Этап 12] Генерация bug report через LLM");
-        OpenRouterClient.LlmResponse bugResponse = OpenRouterClient.call(bugPrompt, LlmProfile.BUG_REPORT);
+        OpenRouterClient.LlmResponse bugResponse = OpenRouterClient.call(bugPrompt);
         FilesUtil.write("generated/bug_report_raw.json", bugResponse.rawBody());
         FilesUtil.write("generated/bug_report_llm.txt", bugResponse.content());
         FilesUtil.write("generated/bug_report.json", JsonExtractor.extractJson(bugResponse.content()));
